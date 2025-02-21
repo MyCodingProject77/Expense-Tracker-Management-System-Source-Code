@@ -1,0 +1,117 @@
+
+
+    CREATE DATABASE ExpenseDB;
+
+
+
+ USE ExpenseDB;
+
+
+
+
+CREATE TABLE Expenses (
+    ID INT IDENTITY(1,1) PRIMARY KEY,   
+    ExpenseDate DATE NOT NULL,          
+    Category NVARCHAR(100) NOT NULL,    
+    Amount DECIMAL(10,2) NOT NULL,      
+    Description NVARCHAR(255) NULL      
+);
+
+
+Design the Form:
+Add a DataGridView (dgvExpenses) to display records.
+Add TextBoxes for Category (txtCategory), Amount (txtAmount), and Description (txtDescription).
+Add a DateTimePicker (dtpDate) for the expense date.
+Add Buttons: Add Expense (btnAdd) and Delete Selected (btnDelete).
+
+
+
+
+
+
+ using System;
+using System.Data;
+using System.Data.SqlClient;
+using System.Windows.Forms;
+
+namespace ExpenseTracker
+{
+    public partial class MainForm : Form
+    {
+        private string connectionString = "Server=YOUR_SERVER_NAME;Database=ExpenseDB;Integrated Security=True;";
+
+        public MainForm()
+        {
+            InitializeComponent();
+            LoadExpenses();
+        }
+
+        // Load expenses into DataGridView
+        private void LoadExpenses()
+        {
+            using (SqlConnection con = new SqlConnection(connectionString))
+            {
+                con.Open();
+                SqlDataAdapter da = new SqlDataAdapter("SELECT * FROM Expenses", con);
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+                dgvExpenses.DataSource = dt;
+            }
+        }
+
+        // Add Expense
+        private void btnAdd_Click(object sender, EventArgs e)
+        {
+            if (txtCategory.Text == "" || txtAmount.Text == "")
+            {
+                MessageBox.Show("Please enter category and amount!", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (SqlConnection con = new SqlConnection(connectionString))
+            {
+                con.Open();
+                string query = "INSERT INTO Expenses (ExpenseDate, Category, Amount, Description) VALUES (@date, @category, @amount, @description)";
+                using (SqlCommand cmd = new SqlCommand(query, con))
+                {
+                    cmd.Parameters.AddWithValue("@date", dtpDate.Value);
+                    cmd.Parameters.AddWithValue("@category", txtCategory.Text);
+                    cmd.Parameters.AddWithValue("@amount", Convert.ToDecimal(txtAmount.Text));
+                    cmd.Parameters.AddWithValue("@description", txtDescription.Text);
+
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
+            MessageBox.Show("Expense added successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            LoadExpenses(); // Refresh DataGridView
+        }
+
+        // Delete Selected Expense
+        private void btnDelete_Click(object sender, EventArgs e)
+        {
+            if (dgvExpenses.SelectedRows.Count > 0)
+            {
+                int id = Convert.ToInt32(dgvExpenses.SelectedRows[0].Cells["ID"].Value);
+
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
+                    string query = "DELETE FROM Expenses WHERE ID = @id";
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@id", id);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                MessageBox.Show("Expense deleted successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                LoadExpenses(); // Refresh DataGridView
+            }
+            else
+            {
+                MessageBox.Show("Please select a row to delete!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+    }
+}
